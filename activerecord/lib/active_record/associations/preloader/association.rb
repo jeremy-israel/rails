@@ -27,9 +27,13 @@ module ActiveRecord
         end
 
         def records_by_owner
-          load_records unless defined?(@records_by_owner)
-
-          @records_by_owner
+          # owners can be duplicated when a relation has a collection association join
+          # #compare_by_identity makes such owners different hash keys
+          @records_by_owner ||= preloaded_records.each_with_object({}.compare_by_identity) do |record, result|
+            owners_by_key[convert_key(record[association_key_name])].uniq.each do |owner|
+              (result[owner] ||= []) << record
+            end
+          end
         end
 
         def preloaded_records
